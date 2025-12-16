@@ -15,14 +15,14 @@ def _start_keep_alive():
     
     Configuration via environment variables:
     - KEEP_ALIVE_URL: Full URL to ping (if not set, constructs from PORT)
-    - PORT: Fallback port if KEEP_ALIVE_URL not provided (default: 5000)
+    - PORT: Fallback port if KEEP_ALIVE_URL not provided (default: 5555)
     - KEEP_ALIVE_INTERVAL: Seconds between pings (default: 1500 = 25 minutes)
     """
     keep_alive_url = os.environ.get('KEEP_ALIVE_URL')
     
     if not keep_alive_url:
         # Construct URL from PORT environment variable
-        port = os.environ.get('PORT', '5000')
+        port = os.environ.get('PORT', '5555')
         keep_alive_url = f'http://127.0.0.1:{port}'
     
     # Get interval in seconds (default 1500 = 25 minutes)
@@ -35,18 +35,20 @@ def _start_keep_alive():
         """Worker function that performs periodic HTTP GET requests."""
         while True:
             try:
-                time.sleep(interval)
                 req = urllib.request.Request(keep_alive_url, method='GET')
                 with urllib.request.urlopen(req, timeout=10) as response:
                     # Read response to complete the request
                     _ = response.read()
                 print(f"Keep-alive ping successful to {keep_alive_url}", flush=True)
             except urllib.error.URLError as e:
-                # Silently ignore connection errors - server might not be ready yet
+                # Log connection errors - server might not be ready yet
                 print(f"Keep-alive ping failed: {e}", flush=True)
             except Exception as e:
                 # Log unexpected errors but continue running
                 print(f"Keep-alive unexpected error: {e}", flush=True)
+            
+            # Sleep after ping attempt to avoid initial delay
+            time.sleep(interval)
     
     # Start daemon thread
     thread = threading.Thread(target=_keep_alive_worker, daemon=True, name='KeepAlive')
